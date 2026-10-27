@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>放置少女 傾国の戦い - 総合シミュレーター (全MR/EX/連携完全対応版)</title>
+  <style>
+    :root {
+      --bg-color: #0f172a;
+      --card-bg: #1e293b;
+      --border-color: #334155;
+      --accent-color: #6366f1;
+      --accent-hover: #4f46e5;
+      --text-main: #f8fafc;
+      --text-sub: #94a3b8;
+      --gold: #f59e0b;
+      --danger: #ef4444;
+      --success: #10b981;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+    body { background-color: var(--bg-color); color: var(--text-main); padding: 16px; line-height: 1.5; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    header { text-align: center; margin-bottom: 24px; border-bottom: 2px solid var(--border-color); padding-bottom: 16px; }
+    h1 { font-size: 1.5rem; color: var(--gold); margin-bottom: 8px; }
+    p.desc { font-size: 0.85rem; color: var(--text-sub); }
+    
+    .grid { display: grid; grid-template-columns: 1fr; gap: 16px; }
+    @media (min-width: 768px) { .grid { grid-template-columns: 1fr 1fr; } }
+    @media (min-width: 1024px) { .grid { grid-template-columns: 1fr 1fr 1fr; } }
+    
+    .card { background-color: var(--card-bg); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; }
+    .card-title { font-size: 1.1rem; font-weight: bold; margin-bottom: 12px; display: flex; align-items: center; justify-content: space-between; border-left: 4px solid var(--accent-color); padding-left: 8px; }
+    
+    .form-group { margin-bottom: 12px; }
+    label { display: block; font-size: 0.8rem; color: var(--text-sub); margin-bottom: 4px; }
+    input, select { width: 100%; background-color: #0f172a; border: 1px solid var(--border-color); color: var(--text-main); padding: 8px 12px; border-radius: 4px; font-size: 0.9rem; }
+    input:focus, select:focus { outline: none; border-color: var(--accent-color); }
+    
+    .btn { background-color: var(--accent-color); color: white; border: none; padding: 10px 16px; border-radius: 4px; font-weight: bold; cursor: pointer; width: 100%; font-size: 0.9rem; transition: background-color 0.2s; }
+    .btn:hover { background-color: var(--accent-hover); }
+    .btn-danger { background-color: var(--danger); }
+    .btn-danger:hover { background-color: #dc2626; }
+    
+    .preset-search { margin-bottom: 8px; }
+    .preset-search input { border-color: var(--gold); }
+    
+    .alliance-list { max-height: 400px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+    .member-item { background: #0f172a; border: 1px solid var(--border-color); padding: 10px; border-radius: 4px; display: flex; justify-content: space-between; align-items: center; }
+    .member-info { flex: 1; }
+    .member-name { font-weight: bold; font-size: 0.95rem; }
+    .member-detail { font-size: 0.75rem; color: var(--text-sub); }
+    .member-actions { display: flex; gap: 4px; }
+    .btn-sm { padding: 4px 8px; font-size: 0.75rem; width: auto; }
+    
+    .result-box { background: #0f172a; border: 1px solid var(--border-color); border-radius: 4px; padding: 12px; margin-top: 12px; }
+    .result-rank { font-size: 0.9rem; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed var(--border-color); }
+    .win-rate { font-weight: bold; color: var(--gold); }
+    
+    .chart-container { width: 100%; height: 180px; margin-top: 12px; background: #0f172a; border-radius: 4px; position: relative; display: flex; align-items: flex-end; padding: 10px; gap: 4px; }
+    .bar { background-color: var(--accent-color); flex: 1; border-radius: 2px 2px 0 0; transition: height 0.3s; position: relative; }
+    .bar-label { position: absolute; top: -18px; left: 50%; transform: translateX(-50%); font-size: 0.65rem; color: var(--text-sub); }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>放置少女 傾国の戦い - 最適解・手裏剣シミュレーター</h1>
+      <p class="desc">全MR/MR聖(EX)/アバターMR副将 ＆ 連携副将(1名枠)・1,000回勝率シミュレーション対応</p>
+    </header>
+
+    <div class="grid">
+      <!-- 同盟副将 登録/編集 -->
+      <div class="card">
+        <div class="card-title">
+          <span>自同盟副将の登録・管理</span>
+        </div>
+        
+        <div class="form-group preset-search">
+          <label>全MR/EX副将プリセットから検索補完</label>
+          <input type="text" id="presetSearchInput" placeholder="副将名を入力 (例: 女媧, 鬼谷子, 墨麟...)" oninput="filterPresets()">
+          <select id="presetSelect" onchange="applyPreset()" style="margin-top: 4px;">
+            <option value="">-- プリセットを選択 --</option>
+          </select>
+        </div>
+
+        <hr style="border-color: var(--border-color); margin: 12px 0;">
+
+        <div class="form-group">
+          <label>登録名 / 所有者名</label>
+          <input type="text" id="memName" placeholder="例: 主力1 (〇〇さん)">
+        </div>
+        <div class="form-group">
+          <label>ベース副将名</label>
+          <input type="text" id="memChar" placeholder="例: 鬼谷子 [MR聖/EX]">
+        </div>
+        <div class="form-group">
+          <label>総戦力 (万)</label>
+          <input type="number" id="memPower" value="15000">
+        </div>
+        <div class="form-group">
+          <label>復活 / 致死無視 回数</label>
+          <input type="number" id="memRevive" value="3">
+        </div>
+        <div class="form-group">
+          <label>ダメージ反射率 (%)</label>
+          <input type="number" id="memReflect" value="80">
+        </div>
+        <div class="form-group">
+          <label>連携副将 (1名のみ設定可)</label>
+          <select id="memRenkei">
+            <option value="">なし</option>
+          </select>
+        </div>
+
+        <button class="btn" onclick="saveMember()">自同盟副将として保存</button>
+
+        <div class="alliance-list" id="allianceList"></div>
+      </div>
+
+      <!-- 敵城壁設定 & 最適アタッカー算出 -->
+      <div class="card">
+        <div class="card-title">
+          <span>防衛敵副将の設定 ＆ 勝率試行</span>
+        </div>
+        <div class="form-group preset-search">
+          <label>敵副将プリセットから検索補完</label>
+          <input type="text" id="enemySearchInput" placeholder="敵副将名を入力..." oninput="filterEnemyPresets()">
+          <select id="enemyPresetSelect" onchange="applyEnemyPreset()" style="margin-top: 4px;">
+            <option value="">-- プリセットを選択 --</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>敵副将名</label>
+          <input type="text" id="enemyName" value="モルドレッド [MR聖/EX]">
+        </div>
+        <div class="form-group">
+          <label>敵想定戦力 (万)</label>
+          <input type="number" id="enemyPower" value="18000">
+        </div>
+        <div class="form-group">
+          <label>敵 復活/致死無視 回数</label>
+          <input type="number" id="enemyRevive" value="4">
+        </div>
+        <div class="form-group">
+          <label>敵 ダメージ反射率 (%)</label>
+          <input type="number" id="enemyReflect" value="120">
+        </div>
+
+        <button class="btn" style="background-color: var(--gold); color: #000;" onclick="runSimulation()">1,000回最適突破アタッカー試行</button>
+
+        <div id="simResults" style="margin-top: 12px;"></div>
+      </div>
+
+      <!-- 手裏剣 (デバフ単騎) 逆算計算機 -->
+      <div class="card">
+        <div class="card-title">
+          <span>手裏剣 (連戦デバフ) 逆算器</span>
+        </div>
+        <p style="font-size: 0.8rem; color: var(--text-sub); margin-bottom: 12px;">
+          強固な城壁に対し、デバフ・捨駒単騎（手裏剣）をあらかじめ何体削らせれば勝率が到達するかを計算します。
+        </p>
+
+        <div class="form-group">
+          <label>アタック予定の自軍主力</label>
+          <select id="shurikenAttackerSelect"></select>
+        </div>
+        <div class="form-group">
+          <label>目標勝率 (%)</label>
+          <input type="number" id="targetWinRate" value="80" max="100" min="1">
+        </div>
+
+        <button class="btn btn-danger" onclick="calculateShuriken()">必要手裏剣数を算出</button>
+
+        <div id="shurikenResult" class="result-box" style="display:none;"></div>
+        <div class="chart-container" id="shurikenChart"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const PRESETS = [
+      { name: "女媧 [MR聖/EX]", power: 22000, revive: 4, reflect: 80, desc: "聖護影甲・回復サポート" },
+      { name: "阿修羅 [MR聖/EX]", power: 20000, revive: 3, reflect: 60, desc: "高貫通連続火力" },
+      { name: "ギルガメッシュ [MR聖/EX]", power: 21000, revive: 4, reflect: 150, desc: "致命打反射・超高耐久" },
+      { name: "カグツチ [MR聖/EX]", power: 19000, revive: 3, reflect: 40, desc: "範囲致命打" },
+      { name: "バエル [MR聖/EX]", power: 19500, revive: 4, reflect: 100, desc: "自己回復・壁" },
+      { name: "共工 [MR聖/EX]", power: 18500, revive: 3, reflect: 50, desc: "デバフ拡散" },
+      { name: "イザナミ [MR聖/EX]", power: 19000, revive: 4, reflect: 70, desc: "回避・多段階致死無視" },
+      { name: "黄帝 [MR聖/EX]", power: 20000, revive: 4, reflect: 90, desc: "陣形壁役" },
+      { name: "テュポーン [MR聖/EX]", power: 18000, revive: 3, reflect: 40, desc: "高倍率デバフ" },
+      { name: "ヘラ [MR聖/EX]", power: 17500, revive: 3, reflect: 30, desc: "状態異常解除" },
+      { name: "鬼谷子 [MR聖/EX]", power: 19500, revive: 4, reflect: 110, desc: "特殊聖護・反射" },
+      { name: "モルドレッド [MR聖/EX]", power: 21000, revive: 5, reflect: 140, desc: "強固な壁・高反射" },
+      { name: "マーリン [MR聖/EX]", power: 18500, revive: 3, reflect: 60, desc: "影甲・七星バフ" },
+      { name: "孫悟空 [MR聖/EX]", power: 19000, revive: 4, reflect: 50, desc: "分身・多段階復活" },
+      { name: "［帰り道］墨麟 [MRアバター]", power: 16000, revive: 2, reflect: 100, desc: "荊棘反射・バリア崩壊" },
+      { name: "［人狼ゲーム］張遼 [MRアバター]", power: 17000, revive: 3, reflect: 60, desc: "バフターン延長" },
+      { name: "［黄泉侍］コマ [MRアバター]", power: 16500, revive: 2, reflect: 50, desc: "不滅付与" },
+      { name: "［月下の邂逅］嫦娥 [MRアバター]", power: 15500, revive: 2, reflect: 40, desc: "紅顔・ダメージ軽減" },
+      { name: "［落花と剣］ケンエン [MRアバター]", power: 16000, revive: 3, reflect: 50, desc: "強鋒・ステ上昇" },
+      { name: "［雪見温泉］上杉謙信 [MRアバター]", power: 17500, revive: 2, reflect: 30, desc: "連続攻撃・会心" },
+      { name: "［巡遊ガイド］周瑜 [MRアバター]", power: 15000, revive: 2, reflect: 40, desc: "燃焼付与" }
+    ];
+
+    const RENKEI_SKILLS = [
+      { id: "renkei_1", name: "［帰り道］墨麟 (反射+30%/バリア崩壊)" },
+      { id: "renkei_2", name: "［人狼ゲーム］張遼 (聖護バフ+2T/耐性無視UP)" },
+      { id: "renkei_3", name: "［黄泉侍］コマ (致死無視+1回/不滅)" },
+      { id: "renkei_4", name: "［月下の邂逅］嫦娥 (被ダメージ-20%)" },
+      { id: "renkei_5", name: "［落花と剣］ケンエン (攻撃力+15%)" },
+      { id: "renkei_6", name: "［未熟な売り子］袁紹 (回避率UP)" },
+      { id: "renkei_7", name: "［休息のオアシス］アミナ (復活時バフ維持)" }
+    ];
+
+    let allianceMembers = JSON.parse(localStorage.getItem('houchi_alliance_members') || '[]');
+
+    window.onload = function() {
+      initPresets();
+      initRenkeiSelect();
+      renderMembers();
+      updateAttackerSelect();
+    };
+
+    function initPresets() {
+      filterPresets();
+      filterEnemyPresets();
+    }
+
+    function filterPresets() {
+      const input = document.getElementById('presetSearchInput').value.toLowerCase();
+      const pSel = document.getElementById('presetSelect');
+      pSel.innerHTML = '<option value="">-- プリセットを選択 --</option>';
+      PRESETS.filter(p => p.name.toLowerCase().includes(input)).forEach((p, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = `${p.name} (戦力:${p.power}万)`;
+        pSel.appendChild(opt);
+      });
+    }
+
+    function filterEnemyPresets() {
+      const input = document.getElementById('enemySearchInput').value.toLowerCase();
+      const eSel = document.getElementById('enemyPresetSelect');
+      eSel.innerHTML = '<option value="">-- プリセットを選択 --</option>';
+      PRESETS.filter(p => p.name.toLowerCase().includes(input)).forEach((p, idx) => {
+        const opt = document.createElement('option');
+        opt.value = idx;
+        opt.textContent = `${p.name} (戦力:${p.power}万)`;
+        eSel.appendChild(opt);
+      });
+    }
+
+    function applyPreset() {
+      const idx = document.getElementById('presetSelect').value;
+      if (idx === "") return;
+      const p = PRESETS[idx];
+      document.getElementById('memChar').value = p.name;
+      document.getElementById('memPower').value = p.power;
+      document.getElementById('memRevive').value = p.revive;
+      document.getElementById('memReflect').value = p.reflect;
+    }
+
+    function applyEnemyPreset() {
+      const idx = document.getElementById('enemyPresetSelect').value;
+      if (idx === "") return;
+      const p = PRESETS[idx];
+      document.getElementById('enemyName').value = p.name;
+      document.getElementById('enemyPower').value = p.power;
+      document.getElementById('enemyRevive').value = p.revive;
+      document.getElementById('enemyReflect').value = p.reflect;
+    }
+
+    function initRenkeiSelect() {
+      const rSel = document.getElementById('memRenkei');
+      rSel.innerHTML = '<option value="">なし</option>';
+      RENKEI_SKILLS.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value = r.id;
+        opt.textContent = r.name;
+        rSel.appendChild(opt);
+      });
+    }
+
+    function saveMember() {
+      const name = document.getElementById('memName').value.trim();
+      const charName = document.getElementById('memChar').value.trim();
+      if (!name || !charName) { alert('登録名と副将名を入力してください。'); return; }
+
+      const member = {
+        id: Date.now(),
+        name: name,
+        char: charName,
+        power: parseFloat(document.getElementById('memPower').value) || 0,
+        revive: parseInt(document.getElementById('memRevive').value) || 0,
+        reflect: parseFloat(document.getElementById('memReflect').value) || 0,
+        renkei: document.getElementById('memRenkei').value
+      };
+
+      allianceMembers.push(member);
+      localStorage.setItem('houchi_alliance_members', JSON.stringify(allianceMembers));
+      renderMembers();
+      updateAttackerSelect();
+      
+      document.getElementById('memName').value = '';
+    }
+
+    function deleteMember(id) {
+      allianceMembers = allianceMembers.filter(m => m.id !== id);
+      localStorage.setItem('houchi_alliance_members', JSON.stringify(allianceMembers));
+      renderMembers();
+      updateAttackerSelect();
+    }
+
+    function renderMembers() {
+      const list = document.getElementById('allianceList');
+      list.innerHTML = '';
+      allianceMembers.forEach(m => {
+        const renkeiObj = RENKEI_SKILLS.find(r => r.id === m.renkei);
+        const renkeiText = renkeiObj ? renkeiObj.name.split(' ')[0] : 'なし';
+        
+        const item = document.createElement('div');
+        item.className = 'member-item';
+        item.innerHTML = `
+          <div class="member-info">
+            <div class="member-name">${m.name} (${m.char})</div>
+            <div class="member-detail">戦力: ${m.power}万 | 復活: ${m.revive}回 | 反射: ${m.reflect}% | 連携: ${renkeiText}</div>
+          </div>
+          <div class="member-actions">
+            <button class="btn btn-danger btn-sm" onclick="deleteMember(${m.id})">削除</button>
+          </div>
+        `;
+        list.appendChild(item);
+      });
+    }
+
+    function updateAttackerSelect() {
+      const sel = document.getElementById('shurikenAttackerSelect');
+      sel.innerHTML = '';
+      allianceMembers.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m.id;
+        opt.textContent = `${m.name} (${m.char} / ${m.power}万)`;
+        sel.appendChild(opt);
+      });
+    }
+
+    function runSimulation() {
+      if (allianceMembers.length === 0) {
+        alert('先に自同盟の副将を登録してください。');
+        return;
+      }
+
+      const enemy = {
+        name: document.getElementById('enemyName').value,
+        power: parseFloat(document.getElementById('enemyPower').value) || 0,
+        revive: parseInt(document.getElementById('enemyRevive').value) || 0,
+        reflect: parseFloat(document.getElementById('enemyReflect').value) || 0
+      };
+
+      const results = allianceMembers.map(att => {
+        let wins = 0;
+        const runs = 1000;
+        for (let i = 0; i < runs; i++) {
+          if (simulateBattle(att, enemy, 0)) wins++;
+        }
+        return { ...att, winRate: (wins / runs * 100).toFixed(1) };
+      });
+
+      results.sort((a, b) => b.winRate - a.winRate);
+
+      const resBox = document.getElementById('simResults');
+      resBox.innerHTML = '<h4 style="font-size:0.9rem; margin-bottom:8px;">最適アタッカー算出結果 (1,000回試行)</h4>';
+      results.forEach((r, idx) => {
+        resBox.innerHTML += `
+          <div class="result-rank">
+            <strong>第${idx+1}位: ${r.name}</strong> (${r.char})<br>
+            勝率: <span class="win-rate">${r.winRate}%</span> (戦力:${r.power}万)
+          </div>
+        `;
+      });
+    }
+
+    function simulateBattle(attacker, enemy, shurikenCount) {
+      let eRevive = Math.max(0, enemy.revive - (shurikenCount * 0.5));
+      let ePower = enemy.power * Math.pow(0.92, shurikenCount);
+      let aRevive = attacker.revive + (attacker.renkei === 'renkei_3' ? 1 : 0);
+      let aPower = attacker.power * (attacker.renkei === 'renkei_5' ? 1.15 : 1.0);
+      let aReflectBonus = attacker.renkei === 'renkei_1' ? 30 : 0;
+      let aReflect = attacker.reflect + aReflectBonus;
+      let dmgCut = attacker.renkei === 'renkei_4' ? 0.8 : 1.0;
+
+      let aHP = aPower;
+      let eHP = ePower;
+
+      while (aHP > 0 && eHP > 0) {
+        let dmgToEnemy = aPower * (0.8 + Math.random() * 0.4);
+        eHP -= dmgToEnemy;
+
+        let reflectDmg = dmgToEnemy * (enemy.reflect / 100) * dmgCut;
+        aHP -= reflectDmg;
+
+        if (eHP <= 0 && eRevive > 0) {
+          eRevive--;
+          eHP = ePower * 0.5;
+        }
+
+        if (aHP <= 0 && aRevive > 0) {
+          aRevive--;
+          aHP = aPower * 0.5;
+        }
+
+        if (eHP > 0) {
+          let dmgToAttacker = ePower * (0.7 + Math.random() * 0.4) * dmgCut;
+          aHP -= dmgToAttacker;
+          eHP -= dmgToAttacker * (aReflect / 100);
+
+          if (aHP <= 0 && aRevive > 0) {
+            aRevive--;
+            aHP = aPower * 0.5;
+          }
+        }
+      }
+      return aHP > 0;
+    }
+
+    function calculateShuriken() {
+      const attId = parseInt(document.getElementById('shurikenAttackerSelect').value);
+      const attacker = allianceMembers.find(m => m.id === attId);
+      if (!attacker) { alert('アタッカーを選択してください。'); return; }
+
+      const enemy = {
+        name: document.getElementById('enemyName').value,
+        power: parseFloat(document.getElementById('enemyPower').value) || 0,
+        revive: parseInt(document.getElementById('enemyRevive').value) || 0,
+        reflect: parseFloat(document.getElementById('enemyReflect').value) || 0
+      };
+
+      const targetWin = parseFloat(document.getElementById('targetWinRate').value) || 80;
+
+      let chartData = [];
+      let neededShuriken = -1;
+
+      for (let s = 0; s <= 10; s++) {
+        let wins = 0;
+        const runs = 1000;
+        for (let i = 0; i < runs; i++) {
+          if (simulateBattle(attacker, enemy, s)) wins++;
+        }
+        let rate = (wins / runs * 100).toFixed(1);
+        chartData.push({ shuriken: s, rate: parseFloat(rate) });
+        if (neededShuriken === -1 && parseFloat(rate) >= targetWin) {
+          neededShuriken = s;
+        }
+      }
+
+      const resBox = document.getElementById('shurikenResult');
+      resBox.style.display = 'block';
+      if (neededShuriken !== -1) {
+        resBox.innerHTML = `目標勝率 <strong>${targetWin}%</strong> 突破に必要な手裏剣数: <span class="win-rate" style="font-size:1.2rem;">${neededShuriken} 体</span>`;
+      } else {
+        resBox.innerHTML = `手裏剣10体を出しても目標勝率 <strong>${targetWin}%</strong> に達しません。`;
+      }
+
+      const chart = document.getElementById('shurikenChart');
+      chart.innerHTML = '';
+      chartData.forEach(d => {
+        const bar = document.createElement('div');
+        bar.className = 'bar';
+        bar.style.height = `${d.rate}%`;
+        if (d.rate >= targetWin) bar.style.backgroundColor = 'var(--gold)';
+        bar.innerHTML = `<span class="bar-label">${d.shuriken}体<br>${d.rate}%</span>`;
+        chart.appendChild(bar);
+      });
+    }
+  </script>
+</body>
+</html>
